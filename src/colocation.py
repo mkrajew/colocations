@@ -26,6 +26,9 @@ from __future__ import annotations
 
 from collections import defaultdict
 
+import numpy as np
+from scipy.spatial import cKDTree
+
 Feature = str
 InstanceIdx = int
 Colocation = tuple[Feature, ...]
@@ -70,3 +73,51 @@ def apriori_gen(prev_size_k: list[Colocation]) -> list[Colocation]:
                     candidates.append(cand)
     candidates.sort()
     return candidates
+
+
+# ---------------------------------------------------------------------------
+# Neighbor relation R (fine grain) and helpers
+# ---------------------------------------------------------------------------
+
+
+def _build_neighbors(
+    coords: np.ndarray, distance: float
+) -> tuple[np.ndarray, list[set[int]]]:
+    """Return ``(pairs, adjacency)`` for the Euclidean R relation.
+
+    ``pairs`` is the (M, 2) array returned by ``cKDTree.query_pairs``
+    (each row ``[i, j]`` with ``i < j``). ``adjacency[i]`` is the set of
+    instance indices adjacent to ``i`` (excluding ``i`` itself).
+    """
+    tree = cKDTree(coords)
+    pairs = tree.query_pairs(r=distance, output_type="ndarray")
+    n = len(coords)
+    adj: list[set[int]] = [set() for _ in range(n)]
+    for i, j in pairs:
+        adj[int(i)].add(int(j))
+        adj[int(j)].add(int(i))
+    return pairs, adj
+
+
+def _instances_by_feature(feat_arr: np.ndarray) -> dict[Feature, np.ndarray]:
+    """Group instance indices by feature label.
+
+    The input array is interpreted as ``feat_arr[i] = feature_of_instance_i``.
+    The returned dictionary maps each feature to a sorted ``int64`` array of
+    instance indices where that feature appears.
+
+    Example
+    -------
+    >>> feat_arr = np.asarray(["A", "B", "A", "C", "B"])
+    >>> out = _instances_by_feature(feat_arr)
+    >>> out["A"]
+    array([0, 2])
+    >>> out["B"]
+    array([1, 4])
+    >>> out["C"]
+    array([3])
+    """
+    by_feat: dict[Feature, list[int]] = defaultdict(list)
+    for idx, f in enumerate(feat_arr):
+        by_feat[f].append(idx)
+    return {f: np.asarray(sorted(v), dtype=np.int64) for f, v in by_feat.items()}
