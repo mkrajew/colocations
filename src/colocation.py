@@ -25,6 +25,8 @@ Implements the event-centric colocation mining algorithm. Highlights:
 from __future__ import annotations
 
 from collections import defaultdict
+from dataclasses import dataclass
+from itertools import combinations
 
 import numpy as np
 from scipy.spatial import cKDTree
@@ -35,6 +37,22 @@ Colocation = tuple[Feature, ...]
 RowInstance = tuple[InstanceIdx, ...]
 Cell = tuple[int, int]
 CoarseRow = tuple[Cell, ...]
+
+
+@dataclass(frozen=True)
+class ColocationRule:
+    """A directional rule ``antecedent => consequent``.
+
+    The two halves are disjoint feature subsets whose union is a prevalent
+    colocation. ``prevalence`` is the PI of that union. ``conditional_probability``
+    is the fraction of antecedent row instances that are R-reachable to
+    some row instance of the consequent.
+    """
+
+    antecedent: Colocation
+    consequent: Colocation
+    prevalence: float
+    conditional_probability: float
 
 
 # ---------------------------------------------------------------------------
@@ -228,3 +246,73 @@ def _participation_index(
     for idx, f in enumerate(cand):
         pr[f] = float(np.unique(arr[:, idx]).size) / max(feature_counts[f], 1)
     return min(pr.values()), pr
+
+
+# ---------------------------------------------------------------------------
+# Colocation rule generation
+# ---------------------------------------------------------------------------
+
+
+def _generate_rules(
+    prevalent: dict[int, list[Colocation]],
+    pi_values: dict[Colocation, float],
+    table_instances: dict[Colocation, list[RowInstance]],
+    feature_counts: dict[Feature, int],
+    min_conditional_prob: float,
+) -> list[ColocationRule]:
+    """Emit every rule ``c1 => c2`` with cp(c1 => c2) >= threshold.
+
+    For ``c = c1 union c2`` prevalent and ``c1 inter c2 = empty``,
+
+        cp(c1 => c2) = |pi_c1(table_instance(c))| / |table_instance(c1)|
+
+    where ``pi_c1`` is the relational projection on the columns of c1
+    with duplicate elimination. By antimonotonicity ``c1`` is also
+    prevalent so its table instance is cached.
+
+    Example
+    -------
+    >>> prevalent = {3: [("A", "B", "C")]}
+    >>> pi_values = {("A", "B", "C"): 0.42}
+    >>> table_instances = {
+    ...     ("A", "B", "C"): [(0, 10, 20), (1, 10, 21), (1, 11, 21)],
+    ...     ("A", "B"): [(0, 10), (1, 10), (1, 11), (2, 12)],
+    ...     ("A", "C"): [(0, 20), (1, 21), (2, 22)],
+    ...     ("B", "C"): [(10, 20), (10, 21), (11, 21), (12, 22), (13, 23)],
+    ... }
+    >>> feature_counts = {"A": 3, "B": 4, "C": 2}
+    >>> rules = _generate_rules(
+    ...     prevalent, pi_values, table_instances, feature_counts, 0.7
+    ... )
+    >>> [(r.antecedent, r.consequent, round(r.conditional_probability, 2)) for r in rules]
+    [(('C',), ('A', 'B'), 1.0), (('A', 'B'), ('C',), 0.75)]
+    """
+    rules: list[ColocationRule] = []
+    for size, members in prevalent.items():
+        if size < 2:
+            continue
+        for c in members:
+            arr = np.asarray(table_instances[c], dtype=np.int64)
+            for r in range(1, size):
+                for ant_features in combinations(c, r):
+                    cons_features = tuple(f for f in c if f not in ant_features)
+                    indices = [c.index(f) for f in ant_features]
+                    proj = arr[:, indices]
+                    proj_unique = np.unique(proj, axis=0) if proj.size else proj
+                    if len(ant_features) == 1:
+                        denom = feature_counts[ant_features[0]]
+                    else:
+                        denom = len(table_instances.get(ant_features, []))
+                    if denom == 0:
+                        continue
+                    cp = float(len(proj_unique)) / denom
+                    if cp >= min_conditional_prob:
+                        rules.append(
+                            ColocationRule(
+                                antecedent=ant_features,
+                                consequent=cons_features,
+                                prevalence=pi_values[c],
+                                conditional_probability=cp,
+                            )
+                        )
+    return rules
