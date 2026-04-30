@@ -121,3 +121,45 @@ def _instances_by_feature(feat_arr: np.ndarray) -> dict[Feature, np.ndarray]:
     for idx, f in enumerate(feat_arr):
         by_feat[f].append(idx)
     return {f: np.asarray(sorted(v), dtype=np.int64) for f, v in by_feat.items()}
+
+
+# ---------------------------------------------------------------------------
+# Table instance generation: size-2 (geometric) and size-(k+1) (combinatorial)
+# ---------------------------------------------------------------------------
+
+
+def _generate_size2_geometric(
+    pairs: np.ndarray, feat_arr: np.ndarray
+) -> dict[Colocation, list[RowInstance]]:
+    """For every neighbor pair, append the row instance to the right table.
+
+    Pairs returned by ``cKDTree.query_pairs`` come with ``i < j`` on
+    instance indices, but we order each row by the *feature* lexicographic
+    order so that all row instances of a given size-2 colocation have a
+    consistent column layout.
+
+    Example
+    -------
+    >>> pairs = np.asarray([[0, 1], [0, 2], [1, 2]], dtype=np.int64)
+    >>> feat_arr = np.asarray(["A", "C", "B"])
+    >>> tables = _generate_size2_geometric(pairs, feat_arr)
+    >>> tables[("A", "B")]
+    [(0, 2)]
+    >>> tables[("A", "C")]
+    [(0, 1)]
+    >>> tables[("B", "C")]
+    [(2, 1)]
+    """
+    tables: dict[Colocation, list[RowInstance]] = defaultdict(list)
+    for i, j in pairs:
+        ii, jj = int(i), int(j)
+        fi, fj = feat_arr[ii], feat_arr[jj]
+        if fi == fj:
+            continue
+        if fi < fj:
+            tables[(fi, fj)].append((ii, jj))
+        else:
+            tables[(fj, fi)].append((jj, ii))
+    for k in tables:
+        tables[k].sort()
+    return tables
