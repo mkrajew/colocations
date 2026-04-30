@@ -163,3 +163,44 @@ def _generate_size2_geometric(
     for k in tables:
         tables[k].sort()
     return tables
+
+
+def _join_combinatorial(
+    parent_a: list[RowInstance],
+    parent_b: list[RowInstance],
+    adjacency: list[set[int]],
+) -> list[RowInstance]:
+    """Produce the size-(k+1) table from two size-k parents that share a prefix.
+
+    ``parent_a`` corresponds to ``c[:-1]`` and ``parent_b`` to
+    ``c[:-2] + (c[-1],)``; they agree on the first k-1 features. The
+    sort-merge join matches rows on their first k-1 instances, and the
+    spatial constraint ``(row_a[-1], row_b[-1]) in R`` is then evaluated
+    against the precomputed adjacency.
+
+    Example
+    -------
+    >>> parent_a = [(10, 20, 30), (11, 21, 31)]  # e.g. (A,B,C) rows
+    >>> parent_b = [(10, 20, 40), (10, 20, 41), (11, 21, 42)]  # (A,B,D) rows
+    >>> adjacency = [set() for _ in range(43)]
+    >>> adjacency[30] = {40}
+    >>> adjacency[31] = {42}
+    >>> _join_combinatorial(parent_a, parent_b, adjacency)
+    [(10, 20, 30, 40), (11, 21, 31, 42)]
+    """
+    index_b: dict[tuple[int, ...], list[int]] = defaultdict(list)
+    for row in parent_b:
+        index_b[row[:-1]].append(row[-1])
+    out: list[RowInstance] = []
+    for row_a in parent_a:
+        prefix = row_a[:-1]
+        last_a = row_a[-1]
+        bucket = index_b.get(prefix)
+        if not bucket:
+            continue
+        adj_a = adjacency[last_a]
+        for last_b in bucket:
+            if last_b in adj_a:
+                out.append(prefix + (last_a, last_b))
+    out.sort()
+    return out
