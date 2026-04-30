@@ -204,3 +204,27 @@ def _join_combinatorial(
                 out.append(prefix + (last_a, last_b))
     out.sort()
     return out
+
+
+# ---------------------------------------------------------------------------
+# Participation index / participation ratio
+# ---------------------------------------------------------------------------
+
+
+def _participation_index(
+    cand: Colocation,
+    table: list[RowInstance],
+    feature_counts: dict[Feature, int],
+) -> tuple[float, dict[Feature, float]]:
+    """Compute ``pi(c)`` and the per-feature participation ratios.
+
+    ``pr(c, fi) = |unique fi-column of table_instance(c)| / |instances of fi|``
+    and ``pi(c) = min_i pr(c, fi)``.
+    """
+    if not table:
+        return 0.0, {f: 0.0 for f in cand}
+    arr = np.asarray(table, dtype=np.int64)
+    pr: dict[Feature, float] = {}
+    for idx, f in enumerate(cand):
+        pr[f] = float(np.unique(arr[:, idx]).size) / max(feature_counts[f], 1)
+    return min(pr.values()), pr
