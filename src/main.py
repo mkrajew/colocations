@@ -14,7 +14,10 @@ from pathlib import Path
 import pandas as pd
 import typer
 
-from colocation import ColocationResult, discover_colocations
+try:  # Support both package execution and direct script execution.
+    from src.colocation import ColocationResult, discover_colocations
+except ModuleNotFoundError:
+    from colocation import ColocationResult, discover_colocations
 
 PROJ_ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = PROJ_ROOT / "data"
@@ -213,7 +216,10 @@ def run(
         _write_csvs(result, output_dir, input_stem)
 
     if plot:
-        from plot import save_result_summary_plot, save_spatial_colocations_plot
+        try:  # Keep compatibility with both entrypoint styles.
+            from src.plot import save_result_summary_plot, save_spatial_colocations_plot
+        except ModuleNotFoundError:
+            from plot import save_result_summary_plot, save_spatial_colocations_plot
 
         top_n = min(max(top_rules, 10), 40)
         summary_plot_path = output_dir / f"{input_stem}_summary.png"

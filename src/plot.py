@@ -13,7 +13,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from colocation import ColocationResult, ColocationRule
+try:  # Support both package execution and direct script execution.
+    from src.colocation import ColocationResult, ColocationRule
+except ModuleNotFoundError:
+    from colocation import ColocationResult, ColocationRule
 
 
 def _format_colocation(features: tuple[str, ...]) -> str:

@@ -12,6 +12,11 @@ dependencies = [
     "typer>=0.25.0",
 ]
 
+[project.scripts]
+main = "src.main:app"
+dataset = "src.dataset:app"
+visualize = "src.visualize:app"
+
 [dependency-groups]
 dev = ["pytest>=8.0"]
 
