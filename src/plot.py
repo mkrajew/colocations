@@ -4,11 +4,14 @@ from __future__ import annotations
 
 from collections import Counter
 from pathlib import Path
+import math
 
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 from colocation import ColocationResult, ColocationRule
 
@@ -42,6 +45,58 @@ def _empty_panel(ax: plt.Axes, title: str, message: str) -> None:
         color="0.4",
     )
     ax.set_axis_off()
+
+
+SPATIAL_STYLE_PAIRS: tuple[tuple[str, str], ...] = (
+    ("#D7191C", "o"),  # red circle
+    ("#2C7BB6", "s"),  # blue square
+    ("#1A9641", "^"),  # green triangle-up
+    ("#F57C00", "D"),  # orange diamond
+    ("#7B3294", "P"),  # purple plus-filled
+    ("#008080", "X"),  # teal x-filled
+    ("#4D4D4D", "v"),  # dark gray triangle-down
+    ("#A65628", "<"),  # brown triangle-left
+    ("#E7298A", ">"),  # magenta triangle-right
+    ("#66A61E", "*"),  # olive star
+)
+
+
+def _choose_colocations_for_spatial_panels(
+    prevalent: dict[tuple[str, ...], float],
+    max_colocations: int | None,
+) -> list[tuple[tuple[str, ...], float]]:
+    """Pick colocations with priority on covering as many sizes as possible."""
+    ranked = sorted(
+        prevalent.items(),
+        key=lambda item: (-item[1], len(item[0]), item[0]),
+    )
+    if not ranked:
+        return []
+
+    best_per_size: dict[int, tuple[tuple[str, ...], float]] = {}
+    for colocation, pi in ranked:
+        size = len(colocation)
+        if size not in best_per_size:
+            best_per_size[size] = (colocation, pi)
+
+    selected: list[tuple[tuple[str, ...], float]] = [
+        best_per_size[size] for size in sorted(best_per_size)
+    ]
+    if max_colocations is None:
+        return selected
+
+    if len(selected) >= max_colocations:
+        return selected[:max_colocations]
+
+    seen = {item[0] for item in selected}
+    for item in ranked:
+        if item[0] in seen:
+            continue
+        selected.append(item)
+        seen.add(item[0])
+        if len(selected) >= max_colocations:
+            break
+    return selected
 
 
 def save_result_summary_plot(
@@ -151,6 +206,93 @@ def save_result_summary_plot(
         _empty_panel(ax_top_rules, "Top rules by cp", "No rules generated.")
 
     fig.suptitle(f"Colocation mining summary: {dataset_name}", fontsize=14)
+    fig.tight_layout(rect=(0, 0, 1, 0.97))
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output, dpi=160, bbox_inches="tight")
+    plt.close(fig)
+    return output
+
+
+def save_spatial_colocations_plot(
+    result: ColocationResult,
+    events: pd.DataFrame,
+    output: Path,
+    dataset_name: str,
+    max_colocations: int | None = None,
+) -> Path:
+    """Save a spatial overlay plot for prevalent colocations across sizes."""
+    ranked = _choose_colocations_for_spatial_panels(
+        result.prevalent,
+        max_colocations=max_colocations,
+    )
+
+    if not ranked:
+        fig, ax = plt.subplots(1, 1, figsize=(9, 8))
+        ax.scatter(
+            events["x"],
+            events["y"],
+            s=7,
+            color="0.75",
+            alpha=0.65,
+            edgecolors="none",
+        )
+        ax.set_title(f"{dataset_name}: no prevalent colocations to highlight")
+        ax.set_xlabel("x (meters, projected CRS)")
+        ax.set_ylabel("y (meters, projected CRS)")
+        ax.grid(True, linestyle=":", alpha=0.35)
+        ax.set_aspect("equal", adjustable="datalim")
+        fig.tight_layout()
+        output.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(output, dpi=160, bbox_inches="tight")
+        plt.close(fig)
+        return output
+
+    n_panels = len(ranked)
+    n_cols = 2 if n_panels > 1 else 1
+    n_rows = int(math.ceil(n_panels / n_cols))
+    fig, axs = plt.subplots(n_rows, n_cols, figsize=(8 * n_cols, 7 * n_rows), squeeze=False)
+    axes = list(axs.flat)
+
+    for panel_idx, ((colocation, pi), ax) in enumerate(zip(ranked, axes)):
+        ax.scatter(events["x"], events["y"], s=6, color="0.88", alpha=0.5, edgecolors="none")
+        table = result.table_instances.get(colocation, [])
+        arr = np.asarray(table, dtype=np.int64)
+        for feat_idx, feature in enumerate(colocation):
+            if arr.size == 0:
+                continue
+            unique_indices = np.unique(arr[:, feat_idx])
+            points = events.iloc[unique_indices]
+            color, marker = SPATIAL_STYLE_PAIRS[feat_idx % len(SPATIAL_STYLE_PAIRS)]
+            ax.scatter(
+                points["x"],
+                points["y"],
+                s=42,
+                alpha=0.95,
+                color=color,
+                marker=marker,
+                linewidths=0.9,
+                edgecolors="black",
+                label=f"{feature} ({len(points)})",
+            )
+
+        ax.set_title(
+            f"{panel_idx + 1}. {_truncate(_format_colocation(colocation), 75)}\n"
+            f"PI={pi:.3f} | table rows={len(table)}"
+        )
+        ax.set_xlabel("x (meters, projected CRS)")
+        ax.set_ylabel("y (meters, projected CRS)")
+        ax.set_aspect("equal", adjustable="datalim")
+        ax.grid(True, linestyle=":", alpha=0.35)
+        ax.legend(loc="best", fontsize="small", frameon=False)
+
+    for ax in axes[n_panels:]:
+        ax.set_axis_off()
+
+    fig.suptitle(
+        f"Spatial point overlays across colocation sizes: {dataset_name}",
+        fontsize=14,
+    )
     fig.tight_layout(rect=(0, 0, 1, 0.97))
 
     output.parent.mkdir(parents=True, exist_ok=True)

@@ -176,7 +176,7 @@ def run(
     plot: bool = typer.Option(
         False,
         "--plot",
-        help="Save a PNG summary of mined colocations and rules.",
+        help="Save PNG summaries of mined colocations/rules and spatial overlays.",
     ),
 ) -> None:
     """Run the colocation miner on an events CSV."""
@@ -213,18 +213,34 @@ def run(
         _write_csvs(result, output_dir, input_stem)
 
     if plot:
-        from plot import save_result_summary_plot
+        from plot import save_result_summary_plot, save_spatial_colocations_plot
 
         top_n = min(max(top_rules, 10), 40)
-        plot_path = output_dir / f"{input_stem}_summary.png"
+        summary_plot_path = output_dir / f"{input_stem}_summary.png"
         save_result_summary_plot(
             result=result,
-            output=plot_path,
+            output=summary_plot_path,
             dataset_name=input_stem,
             top_colocations=top_n,
             top_rules=top_n,
         )
-        typer.echo(f"Saved summary plot to {plot_path}")
+        typer.echo(f"Saved summary plot to {summary_plot_path}")
+
+        mined_events = events
+        if feature_filter is not None:
+            mined_events = events.loc[
+                events["feature_type"].apply(feature_filter)
+            ].reset_index(drop=True)
+
+        spatial_plot_path = output_dir / f"{input_stem}_spatial_colocations.png"
+        save_spatial_colocations_plot(
+            result=result,
+            events=mined_events,
+            output=spatial_plot_path,
+            dataset_name=input_stem,
+            max_colocations=None,
+        )
+        typer.echo(f"Saved spatial colocation plot to {spatial_plot_path}")
 
 
 if __name__ == "__main__":
