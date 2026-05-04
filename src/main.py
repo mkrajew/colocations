@@ -176,7 +176,7 @@ def run(
     plot: bool = typer.Option(
         False,
         "--plot",
-        help="Save a PNG of the spatial point map (requires matplotlib).",
+        help="Save a PNG summary of mined colocations and rules.",
     ),
 ) -> None:
     """Run the colocation miner on an events CSV."""
@@ -208,8 +208,23 @@ def run(
 
     _print_summary(result, top_rules=top_rules)
 
+    input_stem = _export_name_prefix(csv_path)
     if save_csv:
-        _write_csvs(result, output_dir, _export_name_prefix(csv_path))
+        _write_csvs(result, output_dir, input_stem)
+
+    if plot:
+        from plot import save_result_summary_plot
+
+        top_n = min(max(top_rules, 10), 40)
+        plot_path = output_dir / f"{input_stem}_summary.png"
+        save_result_summary_plot(
+            result=result,
+            output=plot_path,
+            dataset_name=input_stem,
+            top_colocations=top_n,
+            top_rules=top_n,
+        )
+        typer.echo(f"Saved summary plot to {plot_path}")
 
 
 if __name__ == "__main__":
