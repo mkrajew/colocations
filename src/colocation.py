@@ -12,11 +12,6 @@ Implements the event-centric colocation mining algorithm. Highlights:
 * Prevalence is the *participation index* (min over features of the
   participation ratio); pruning at every level is therefore safe by
   Lemma 3 (antimonotonicity).
-* Optional *multi-resolution* coarse-grid pruning: a coarse table
-  instance is computed first using a d x d grid, the coarse
-  participation index never underestimates the fine PI (Lemma 4), so a
-  candidate whose coarse PI is below the threshold can be skipped
-  without computing the fine table instance.
 * Colocation rules ``c1 => c2`` are generated from each prevalent
   colocation c = c1 union c2 with conditional probability above a
   user-supplied threshold.
@@ -342,7 +337,6 @@ def discover_colocations(
     distance: float,
     min_prevalence: float,
     min_conditional_prob: float = 0.0,
-    use_multiresolution: bool = False,
     feature_filter: Callable[[Feature], bool] | None = None,
     progress_callback: Callable[[str], None] | None = None,
 ) -> ColocationResult:
@@ -361,10 +355,6 @@ def discover_colocations(
         Minimum participation index required for a colocation to be kept.
     min_conditional_prob:
         Minimum conditional probability required for an emitted rule.
-    use_multiresolution:
-        If ``True``, run a coarse-grid pruning pass before computing the
-        fine-level table instance of each candidate. Especially useful
-        on spatially clustered data sets.
     feature_filter:
         Optional predicate applied to ``feature_type`` values, useful for
         dropping rare or noisy categories before mining.
@@ -398,15 +388,19 @@ def discover_colocations(
 
     by_feature = _instances_by_feature(feat_arr)  # instances grouped by feature
 
-    prevalent: dict[int, list[Colocation]] = {1: [(f,) for f in feature_types]}  # by size
+    prevalent: dict[int, list[Colocation]] = {
+        1: [(f,) for f in feature_types]
+    }  # by size
     table_fine: dict[Colocation, list[RowInstance]] = {
         # Size-1 table instances: one row per feature instance.
-        (f,): [(int(i),) for i in by_feature[f]] for f in feature_types
+        (f,): [(int(i),) for i in by_feature[f]]
+        for f in feature_types
     }
     pi_values: dict[Colocation, float] = {(f,): 1.0 for f in feature_types}  # PI(c)
     pr_values: dict[Colocation, dict[Feature, float]] = {
         # Per-feature participation ratios for each colocation.
-        (f,): {f: 1.0} for f in feature_types
+        (f,): {f: 1.0}
+        for f in feature_types
     }
 
     # ---- Iteration k = 2 (geometric) ----
@@ -490,7 +484,6 @@ def discover_colocations(
             "distance": distance,
             "min_prevalence": min_prevalence,
             "min_conditional_prob": min_conditional_prob,
-            "use_multiresolution": use_multiresolution,
             "n_events": int(len(events)),
             "n_features": len(feature_types),
             "max_size": max_prevalent_size,

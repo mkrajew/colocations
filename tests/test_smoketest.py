@@ -28,8 +28,8 @@ def _events() -> pd.DataFrame:
     return df[["instance_id", "feature_type", "x", "y"]]
 
 
-def test_smoketest_fig2_and_multiresolution_equivalence() -> None:
-    """Reproduce Fig. 2 PI values and ensure multiresolution matches fine results."""
+def test_smoketest_fig2() -> None:
+    """Reproduce Fig. 2 PI values."""
     events = _events()
 
     res = discover_colocations(
@@ -44,15 +44,3 @@ def test_smoketest_fig2_and_multiresolution_equivalence() -> None:
     assert res.prevalent[("B", "C")] == pytest.approx(0.2)
     assert res.prevalent[("A", "B", "C")] == pytest.approx(0.2)
     assert len(res.table_instances[("A", "B", "C")]) == 1
-
-    res_mr = discover_colocations(
-        events,
-        distance=1.5,
-        min_prevalence=0.0,
-        min_conditional_prob=0.0,
-        use_multiresolution=True,
-    )
-
-    assert set(res_mr.prevalent) == set(res.prevalent)
-    for colocation, pi in res.prevalent.items():
-        assert res_mr.prevalent[colocation] == pytest.approx(pi)
