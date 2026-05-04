@@ -5,6 +5,7 @@ This repository contains a Python implementation of the event-centric co-locatio
 Y. Huang, S. Shekhar, H. Xiong, *Discovering Co-location Patterns from Spatial Data Sets: A General Approach*, IEEE TKDE, 2004.
 
 The implementation mines prevalent spatial co-locations using:
+
 - Euclidean neighbor relation `R` with threshold distance `d`
 - Participation Index (PI) as prevalence measure
 - Apriori-style candidate generation with anti-monotonic pruning
@@ -72,6 +73,7 @@ uv run visualize data/warsaw_osm_events.csv --color-by feature_type --output res
 ```
 
 Common filters:
+
 - `--key amenity --key shop`
 - `--feature-type amenity=restaurant`
 - `--bbox xmin,ymin,xmax,ymax`
