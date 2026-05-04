@@ -1,0 +1,59 @@
+antecedent,consequent,rule_size,prevalence,conditional_probability
+amenity=bank,amenity=restaurant,2,0.42001545595054096,0.9375
+amenity=bank,amenity=atm,2,0.5352323838080959,0.921875
+tourism=hotel,amenity=restaurant,2,0.5776661514683153,0.9125412541254125
+amenity=cafe,amenity=restaurant,2,0.7376352395672334,0.9099264705882353
+amenity=atm,amenity=restaurant,2,0.6414219474497682,0.8620689655172413
+shop=convenience,amenity=restaurant,2,0.7546367851622875,0.8535754824063564
+amenity=bank,amenity=cafe,2,0.46875,0.8359375
+amenity=pharmacy,amenity=restaurant,2,0.48261205564142196,0.8198198198198198
+amenity=cafe | tourism=hotel,amenity=restaurant,3,0.517387944358578,0.9960575139146568
+amenity=atm | tourism=hotel,amenity=restaurant,3,0.45479134466769705,0.9943741209563994
+shop=convenience | tourism=hotel,amenity=restaurant,3,0.4120317820658343,0.9907727797001153
+amenity=atm | amenity=cafe,amenity=restaurant,3,0.5637557959814529,0.985499462943072
+amenity=cafe | shop=convenience,amenity=restaurant,3,0.6140749148694665,0.9807145115396775
+amenity=cafe | amenity=pharmacy,amenity=restaurant,3,0.42194744976816073,0.9782016348773842
+amenity=atm | shop=convenience,amenity=restaurant,3,0.48127128263337116,0.9710716633793557
+amenity=atm | tourism=hotel,amenity=cafe,3,0.45577211394302847,0.9653070792311299
+amenity=restaurant | tourism=hotel,amenity=cafe,3,0.517387944358578,0.9562485720813343
+amenity=bank | amenity=cafe,amenity=atm,3,0.4338235294117647,0.9546452084857352
+railway=tram_stop | shop=convenience,amenity=restaurant,3,0.4412673879443586,0.9520958083832335
+amenity=cafe | railway=tram_stop,amenity=restaurant,3,0.4331530139103555,0.9489867225716282
+amenity=atm | amenity=restaurant,amenity=cafe,3,0.5637557959814529,0.9434966562030844
+amenity=pharmacy | amenity=restaurant,amenity=cafe,3,0.42194744976816073,0.9085689045936396
+amenity=atm | shop=convenience,amenity=cafe,3,0.41657207718501704,0.9046679815910585
+amenity=restaurant | shop=convenience,amenity=cafe,3,0.6140749148694665,0.9039358600583091
+amenity=restaurant | tourism=hotel,shop=convenience,3,0.4120317820658343,0.9029015307288097
+amenity=cafe | amenity=pharmacy,amenity=atm,3,0.421875,0.8991825613079019
+amenity=atm | amenity=bank,amenity=cafe,3,0.4338235294117647,0.8968692449355433
+amenity=atm | amenity=cafe,shop=convenience,3,0.41657207718501704,0.8912459720730398
+amenity=cafe | amenity=restaurant,shop=convenience,3,0.6140749148694665,0.8900959744068249
+amenity=cafe | tourism=hotel,amenity=atm,3,0.45577211394302847,0.8810296846011132
+amenity=atm | amenity=restaurant,shop=convenience,3,0.48127128263337116,0.8789409035075747
+amenity=restaurant | tourism=hotel,amenity=atm,3,0.45479134466769705,0.8750285583733151
+amenity=restaurant | railway=tram_stop,amenity=cafe,3,0.4331530139103555,0.8525620873939013
+amenity=cafe | amenity=restaurant,amenity=atm,3,0.5637557959814529,0.8491735537190083
+amenity=cafe | railway=tram_stop,shop=convenience,3,0.40408626560726446,0.8455625436757512
+amenity=atm | amenity=pharmacy,amenity=cafe,3,0.421875,0.8436781609195402
+amenity=cafe | amenity=restaurant,tourism=hotel,3,0.517387944358578,0.8421754198880299
+amenity=restaurant | railway=tram_stop,shop=convenience,3,0.4412673879443586,0.8418736246463376
+amenity=pharmacy | shop=supermarket,amenity=atm,3,0.41620111731843573,0.8278145695364238
+amenity=atm | amenity=cafe,tourism=hotel,3,0.45577211394302847,0.8270676691729323
+amenity=atm | amenity=restaurant,tourism=hotel,3,0.45479134466769705,0.8175242254674492
+railway=tram_stop | shop=convenience,amenity=cafe,3,0.40408626560726446,0.8133732534930139
+amenity=atm | amenity=cafe | tourism=hotel,amenity=restaurant,4,0.43160741885625964,0.9992002559181062
+amenity=atm | amenity=cafe | shop=convenience,amenity=restaurant,4,0.40408626560726446,0.996986386781669
+amenity=atm | amenity=restaurant | tourism=hotel,amenity=cafe,4,0.43160741885625964,0.9901707190894982
+amenity=atm | amenity=restaurant | shop=convenience,amenity=cafe,4,0.40408626560726446,0.9768489086670905
+amenity=atm | tourism=hotel,amenity=cafe | amenity=restaurant,4,0.43160741885625964,0.9624941397093296
+amenity=atm | amenity=cafe | amenity=restaurant,tourism=hotel,4,0.43160741885625964,0.9201109247604656
+amenity=cafe | amenity=restaurant | tourism=hotel,amenity=atm,4,0.43160741885625964,0.9132917532917533
+amenity=atm | amenity=cafe | amenity=restaurant,shop=convenience,4,0.40408626560726446,0.9008319357034922
+amenity=atm | shop=convenience,amenity=cafe | amenity=restaurant,4,0.40408626560726446,0.893491124260355
+amenity=atm | amenity=cafe,amenity=restaurant | shop=convenience,4,0.40408626560726446,0.885875402792696
+amenity=cafe | tourism=hotel,amenity=atm | amenity=restaurant,4,0.43160741885625964,0.8796382189239332
+amenity=cafe | amenity=restaurant | shop=convenience,amenity=atm,4,0.40408626560726446,0.8649263034391729
+amenity=restaurant | tourism=hotel,amenity=atm | amenity=cafe,4,0.43160741885625964,0.8533241946538725
+amenity=atm | amenity=restaurant,amenity=cafe | shop=convenience,4,0.40408626560726446,0.8482325644875119
+amenity=atm | amenity=cafe,amenity=restaurant | tourism=hotel,4,0.43160741885625964,0.8241138560687433
+amenity=atm | amenity=restaurant,amenity=cafe | tourism=hotel,4,0.43160741885625964,0.8012829261635048

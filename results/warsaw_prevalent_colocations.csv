@@ -1,0 +1,20 @@
+colocation,size,participation_index,min_pr_feature,table_instances,pr[amenity=atm],pr[amenity=bank],pr[amenity=cafe],pr[amenity=pharmacy],pr[amenity=restaurant],pr[railway=tram_stop],pr[shop=convenience],pr[shop=supermarket],pr[highway=bus_stop]
+amenity=restaurant | shop=convenience,2,0.6696165191740413,shop=convenience,4379,,,,,0.8060969515242379,,0.6696165191740413,,
+amenity=atm | amenity=pharmacy,2,0.6651542649727767,amenity=atm,1158,0.6651542649727767,,,0.696763202725724,,,,,
+amenity=atm | amenity=restaurant,2,0.6406796601699151,amenity=restaurant,3945,0.7713248638838476,,,,0.6406796601699151,,,,
+amenity=cafe | amenity=restaurant,2,0.6201899050474763,amenity=restaurant,5162,,,0.8457269700332963,,0.6201899050474763,,,,
+amenity=atm | amenity=cafe,2,0.6088929219600726,amenity=atm,2560,0.6088929219600726,,0.7125416204217536,,,,,,
+amenity=atm | amenity=bank,2,0.5553539019963702,amenity=atm,1464,0.5553539019963702,0.9269005847953217,,,,,,,
+amenity=atm | shop=convenience,2,0.5492625368731563,shop=convenience,2433,0.8121597096188747,,,,,,0.5492625368731563,,
+amenity=atm | shop=supermarket,2,0.5408348457350273,amenity=atm,789,0.5408348457350273,,,,,,,0.6646341463414634,
+amenity=pharmacy | amenity=restaurant,2,0.5287356321839081,amenity=restaurant,1518,,,,0.7155025553662692,0.5287356321839081,,,,
+highway=bus_stop | shop=convenience,2,0.5272818707568518,highway=bus_stop,4271,,,,,,,0.8312684365781711,,0.5272818707568518
+amenity=pharmacy | shop=supermarket,2,0.5127768313458262,amenity=pharmacy,367,,,,0.5127768313458262,,,,0.5365853658536586,
+amenity=pharmacy | shop=convenience,2,0.5079646017699115,shop=convenience,1195,,,,0.8330494037478705,,,0.5079646017699115,,
+amenity=cafe | amenity=pharmacy,2,0.45826235093696766,amenity=pharmacy,769,,,0.5527192008879024,0.45826235093696766,,,,,
+amenity=restaurant | highway=bus_stop,2,0.4563741513703797,highway=bus_stop,5054,,,,,0.8435782108945528,,,,0.4563741513703797
+amenity=cafe | shop=convenience,2,0.44778761061946903,shop=convenience,2171,,,0.8368479467258602,,,,0.44778761061946903,,
+amenity=atm | railway=tram_stop,2,0.4437386569872958,amenity=atm,1364,0.4437386569872958,,,,,0.6435045317220544,,,
+amenity=bank | amenity=cafe,2,0.42064372918978915,amenity=cafe,770,,0.6461988304093568,0.42064372918978915,,,,,,
+amenity=atm | amenity=cafe | amenity=restaurant,3,0.4572713643178411,amenity=restaurant,13346,0.5281306715063521,,0.6481687014428413,,0.4572713643178411,,,,
+amenity=atm | amenity=restaurant | shop=convenience,3,0.4153392330383481,shop=convenience,8727,0.6542649727767695,,,,0.5477261369315343,,0.4153392330383481,,
