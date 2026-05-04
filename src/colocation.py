@@ -380,12 +380,12 @@ def discover_colocations(
         keep = events["feature_type"].apply(feature_filter)
         events = events.loc[keep].reset_index(drop=True)
 
-    coords = events[["x", "y"]].to_numpy(dtype=np.float64)
-    feat_arr = events["feature_type"].to_numpy()  # lista wszystkich instancji
-    feature_counts: dict[Feature, int] = {  # liczba instancji dla każdego typu
+    coords = events[["x", "y"]].to_numpy(dtype=np.float64)  # point coordinates
+    feat_arr = events["feature_type"].to_numpy()  # feature label per instance
+    feature_counts: dict[Feature, int] = {  # global count of each feature type
         f: int(c) for f, c in events["feature_type"].value_counts().items()
     }
-    feature_types = sorted(feature_counts)  # lista typów instancji
+    feature_types = sorted(feature_counts)  # canonical feature order
 
     log(
         f"events={len(events):,}  features={len(feature_types)}  "
@@ -396,14 +396,16 @@ def discover_colocations(
     pairs, adjacency = _build_neighbors(coords, distance)
     log(f"  neighbor pairs: {len(pairs):,}")
 
-    by_feature = _instances_by_feature(feat_arr)  # lista instancji dla każdego typu
+    by_feature = _instances_by_feature(feat_arr)  # instances grouped by feature
 
-    prevalent: dict[int, list[Colocation]] = {1: [(f,) for f in feature_types]}
+    prevalent: dict[int, list[Colocation]] = {1: [(f,) for f in feature_types]}  # by size
     table_fine: dict[Colocation, list[RowInstance]] = {
+        # Size-1 table instances: one row per feature instance.
         (f,): [(int(i),) for i in by_feature[f]] for f in feature_types
     }
-    pi_values: dict[Colocation, float] = {(f,): 1.0 for f in feature_types}
+    pi_values: dict[Colocation, float] = {(f,): 1.0 for f in feature_types}  # PI(c)
     pr_values: dict[Colocation, dict[Feature, float]] = {
+        # Per-feature participation ratios for each colocation.
         (f,): {f: 1.0} for f in feature_types
     }
 
@@ -432,10 +434,10 @@ def discover_colocations(
         log(f"k={k + 1}: {len(candidates)} candidates after apriori_gen")
         next_level: list[Colocation] = []
         for c in candidates:
-            p = c[:-1]
-            q = c[:-2] + (c[-1],)
-            tp = table_fine.get(p)
-            tq = table_fine.get(q)
+            p = c[:-1]  # first parent (drop last feature)
+            q = c[:-2] + (c[-1],)  # second parent (replace last-1 with last)
+            tp = table_fine.get(p)  # cached table instances of p
+            tq = table_fine.get(q)  # cached table instances of q
             if tp is None or tq is None:
                 continue
             table = _join_combinatorial(tp, tq, adjacency)
