@@ -238,7 +238,7 @@ def run(
             events=mined_events,
             output=spatial_plot_path,
             dataset_name=input_stem,
-            max_colocations=None,
+            max_colocations=4,
         )
         typer.echo(f"Saved spatial colocation plot to {spatial_plot_path}")
 

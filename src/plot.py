@@ -89,11 +89,19 @@ def _choose_colocations_for_spatial_panels(
         return selected[:max_colocations]
 
     seen = {item[0] for item in selected}
-    for item in ranked:
-        if item[0] in seen:
-            continue
+    size_values = sorted(len(c) for c, _ in selected)
+    middle_size = size_values[len(size_values) // 2]
+    remaining = [item for item in ranked if item[0] not in seen]
+    remaining.sort(
+        key=lambda item: (
+            abs(len(item[0]) - middle_size),
+            -item[1],
+            len(item[0]),
+            item[0],
+        )
+    )
+    for item in remaining:
         selected.append(item)
-        seen.add(item[0])
         if len(selected) >= max_colocations:
             break
     return selected
@@ -219,7 +227,7 @@ def save_spatial_colocations_plot(
     events: pd.DataFrame,
     output: Path,
     dataset_name: str,
-    max_colocations: int | None = None,
+    max_colocations: int | None = 4,
 ) -> Path:
     """Save a spatial overlay plot for prevalent colocations across sizes."""
     ranked = _choose_colocations_for_spatial_panels(
@@ -251,11 +259,15 @@ def save_spatial_colocations_plot(
     n_panels = len(ranked)
     n_cols = 2 if n_panels > 1 else 1
     n_rows = int(math.ceil(n_panels / n_cols))
-    fig, axs = plt.subplots(n_rows, n_cols, figsize=(8 * n_cols, 7 * n_rows), squeeze=False)
+    fig, axs = plt.subplots(
+        n_rows, n_cols, figsize=(8 * n_cols, 7 * n_rows), squeeze=False
+    )
     axes = list(axs.flat)
 
     for panel_idx, ((colocation, pi), ax) in enumerate(zip(ranked, axes)):
-        ax.scatter(events["x"], events["y"], s=6, color="0.88", alpha=0.5, edgecolors="none")
+        ax.scatter(
+            events["x"], events["y"], s=6, color="0.88", alpha=0.5, edgecolors="none"
+        )
         table = result.table_instances.get(colocation, [])
         arr = np.asarray(table, dtype=np.int64)
         for feat_idx, feature in enumerate(colocation):
@@ -267,11 +279,11 @@ def save_spatial_colocations_plot(
             ax.scatter(
                 points["x"],
                 points["y"],
-                s=42,
-                alpha=0.95,
+                s=9,
+                alpha=0.9,
                 color=color,
                 marker=marker,
-                linewidths=0.9,
+                linewidths=0.4,
                 edgecolors="black",
                 label=f"{feature} ({len(points)})",
             )
