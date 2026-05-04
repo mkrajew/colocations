@@ -25,10 +25,12 @@ Implements the event-centric colocation mining algorithm. Highlights:
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from itertools import combinations
+from typing import Callable
 
 import numpy as np
+import pandas as pd
 from scipy.spatial import cKDTree
 
 Feature = str
@@ -53,6 +55,18 @@ class ColocationRule:
     consequent: Colocation
     prevalence: float
     conditional_probability: float
+
+
+@dataclass
+class ColocationResult:
+    """Output of :func:`discover_colocations`."""
+
+    feature_counts: dict[Feature, int]
+    prevalent: dict[Colocation, float]
+    participation_ratios: dict[Colocation, dict[Feature, float]]
+    table_instances: dict[Colocation, list[RowInstance]]
+    rules: list[ColocationRule]
+    parameters: dict[str, object] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -316,3 +330,167 @@ def _generate_rules(
                             )
                         )
     return rules
+
+
+# ---------------------------------------------------------------------------
+# Public entry point
+# ---------------------------------------------------------------------------
+
+
+def discover_colocations(
+    events: pd.DataFrame,
+    distance: float,
+    min_prevalence: float,
+    min_conditional_prob: float = 0.0,
+    use_multiresolution: bool = False,
+    feature_filter: Callable[[Feature], bool] | None = None,
+    progress_callback: Callable[[str], None] | None = None,
+) -> ColocationResult:
+    """Mine prevalent colocations and rules from a point dataset.
+
+    Parameters
+    ----------
+    events:
+        Must contain columns ``feature_type``, ``x``, ``y``. Coordinates
+        are expected in a metric (projected) CRS so that ``distance`` is
+        in the same unit (typically meters).
+    distance:
+        Neighbor relation R distance threshold; two instances are
+        neighbors iff their Euclidean distance is at most ``distance``.
+    min_prevalence:
+        Minimum participation index required for a colocation to be kept.
+    min_conditional_prob:
+        Minimum conditional probability required for an emitted rule.
+    use_multiresolution:
+        If ``True``, run a coarse-grid pruning pass before computing the
+        fine-level table instance of each candidate. Especially useful
+        on spatially clustered data sets.
+    feature_filter:
+        Optional predicate applied to ``feature_type`` values, useful for
+        dropping rare or noisy categories before mining.
+    progress_callback:
+        Receives short status strings, one per phase / iteration.
+    """
+    log = progress_callback or (lambda _msg: None)
+
+    if distance < 0:
+        raise ValueError("distance must be non-negative")
+
+    if feature_filter is not None:
+        keep = events["feature_type"].apply(feature_filter)
+        events = events.loc[keep].reset_index(drop=True)
+
+    coords = events[["x", "y"]].to_numpy(dtype=np.float64)
+    feat_arr = events["feature_type"].to_numpy()  # lista wszystkich instancji
+    feature_counts: dict[Feature, int] = {  # liczba instancji dla każdego typu
+        f: int(c) for f, c in events["feature_type"].value_counts().items()
+    }
+    feature_types = sorted(feature_counts)  # lista typów instancji
+
+    log(
+        f"events={len(events):,}  features={len(feature_types)}  "
+        f"d={distance:g}  min_pi={min_prevalence:g}"
+    )
+
+    log("building neighbor relation (KD-tree query_pairs)")
+    pairs, adjacency = _build_neighbors(coords, distance)
+    log(f"  neighbor pairs: {len(pairs):,}")
+
+    by_feature = _instances_by_feature(feat_arr)  # lista instancji dla każdego typu
+
+    prevalent: dict[int, list[Colocation]] = {1: [(f,) for f in feature_types]}
+    table_fine: dict[Colocation, list[RowInstance]] = {
+        (f,): [(int(i),) for i in by_feature[f]] for f in feature_types
+    }
+    pi_values: dict[Colocation, float] = {(f,): 1.0 for f in feature_types}
+    pr_values: dict[Colocation, dict[Feature, float]] = {
+        (f,): {f: 1.0} for f in feature_types
+    }
+
+    # ---- Iteration k = 2 (geometric) ----
+    log("k=2: geometric size-2 join")
+    size2 = _generate_size2_geometric(pairs, feat_arr)
+
+    prevalent[2] = []
+    for c in sorted(size2):
+        table = size2[c]
+        pi, pr = _participation_index(c, table, feature_counts)
+        if pi >= min_prevalence:
+            prevalent[2].append(c)
+            table_fine[c] = table
+            pi_values[c] = pi
+            pr_values[c] = pr
+    prevalent[2].sort()
+    log(f"  prevalent size-2: {len(prevalent[2])}")
+
+    # ---- Iterations k >= 3 (combinatorial) ----
+    k = 2
+    while prevalent.get(k):
+        candidates = apriori_gen(prevalent[k])
+        if not candidates:
+            break
+        log(f"k={k + 1}: {len(candidates)} candidates after apriori_gen")
+        next_level: list[Colocation] = []
+        for c in candidates:
+            p = c[:-1]
+            q = c[:-2] + (c[-1],)
+            tp = table_fine.get(p)
+            tq = table_fine.get(q)
+            if tp is None or tq is None:
+                continue
+            table = _join_combinatorial(tp, tq, adjacency)
+            if not table:
+                continue
+            pi, pr = _participation_index(c, table, feature_counts)
+            if pi >= min_prevalence:
+                next_level.append(c)
+                table_fine[c] = table
+                pi_values[c] = pi
+                pr_values[c] = pr
+        if not next_level:
+            break
+        next_level.sort()
+        prevalent[k + 1] = next_level
+        log(f"  prevalent size-{k + 1}: {len(next_level)}")
+        k += 1
+
+    # ---- Rule generation ----
+    log("generating colocation rules")
+    rules = _generate_rules(
+        prevalent,
+        pi_values,
+        table_fine,
+        feature_counts,
+        min_conditional_prob,
+    )
+    log(f"  rules with cp >= {min_conditional_prob:g}: {len(rules)}")
+
+    prevalent_flat: dict[Colocation, float] = {}
+    pr_flat: dict[Colocation, dict[Feature, float]] = {}
+    for size, members in prevalent.items():
+        if size < 2:
+            continue
+        for c in members:
+            prevalent_flat[c] = pi_values[c]
+            pr_flat[c] = pr_values[c]
+
+    table_flat = {c: table_fine[c] for c in table_fine}
+
+    max_prevalent_size = max((len(c) for c in prevalent_flat), default=1)
+
+    return ColocationResult(
+        feature_counts=feature_counts,
+        prevalent=prevalent_flat,
+        participation_ratios=pr_flat,
+        table_instances=table_flat,
+        rules=rules,
+        parameters={
+            "distance": distance,
+            "min_prevalence": min_prevalence,
+            "min_conditional_prob": min_conditional_prob,
+            "use_multiresolution": use_multiresolution,
+            "n_events": int(len(events)),
+            "n_features": len(feature_types),
+            "max_size": max_prevalent_size,
+        },
+    )
